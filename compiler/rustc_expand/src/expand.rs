@@ -417,6 +417,7 @@ impl<'a, 'b> MacroExpander<'a, 'b> {
                         "expansion entered force mode without producing any errors",
                     );
                 }
+                println!("There is another call, continue to looping");
                 continue;
             };
 
@@ -620,6 +621,7 @@ impl<'a, 'b> MacroExpander<'a, 'b> {
     ) -> ExpandResult<AstFragment, Invocation> {
         let recursion_limit =
             self.cx.reduced_recursion_limit.unwrap_or(self.cx.ecfg.recursion_limit);
+        println!("Recursion deeep: {}", self.cx.current_expansion.depth);
         if !recursion_limit.value_within_limit(self.cx.current_expansion.depth) {
             if self.cx.reduced_recursion_limit.is_none() {
                 self.error_recursion_limit_reached();
@@ -641,9 +643,11 @@ impl<'a, 'b> MacroExpander<'a, 'b> {
                     self.parse_ast_fragment(tok_result, fragment_kind, &mac.path, span)
                 }
                 SyntaxExtensionKind::LegacyBang(expander) => {
+                    println!("Fall in legacy Bang");
                     let prev = self.cx.current_expansion.prior_type_ascription;
                     self.cx.current_expansion.prior_type_ascription = mac.prior_type_ascription;
                     let tok_result = expander.expand(self.cx, span, mac.args.inner_tokens());
+                    println!("\n\n\n **** With Token result -> {} **** \n\n\n", format!("{:?}", mac.args.inner_tokens()));
                     let result = if let Some(result) = fragment_kind.make_from(tok_result) {
                         result
                     } else {
