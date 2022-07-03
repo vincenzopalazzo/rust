@@ -110,8 +110,6 @@ impl RwLock {
             }
             panic!("rwlock write lock would result in deadlock");
         } else {
-            // According to POSIX, for a properly initialized rwlock this can only
-            // return EDEADLK or 0. We rely on that.
             assert_eq!(r, 0, "unexpected error during pthread_rwlock_wrlock: {:?}", r);
         }
         *self.write_locked.get() = true;
