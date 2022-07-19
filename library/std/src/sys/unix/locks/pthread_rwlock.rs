@@ -143,7 +143,7 @@ impl RwLock {
     }
     #[inline]
     pub unsafe fn write_unlock(&self) {
-        debug_assert_eq!(self.num_readers.load(Ordering::Relaxed), 0);
+        assert_eq!(self.num_readers.load(Ordering::Relaxed), 0);
         assert!(*self.write_locked.get(), "trying to unlock a thread already unlocked");
         *self.write_locked.get() = false;
         self.raw_unlock();
