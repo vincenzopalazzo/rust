@@ -497,6 +497,7 @@ impl<'a, 'b> MacroExpander<'a, 'b> {
                         );
                     } else {
                         // Cannot expand, will retry this invocation later.
+                        println!("we are not forcing this");
                         undetermined_invocations.push((invoc, Some(ext)));
                         continue;
                     }
@@ -621,7 +622,7 @@ impl<'a, 'b> MacroExpander<'a, 'b> {
     ) -> ExpandResult<AstFragment, Invocation> {
         let recursion_limit =
             self.cx.reduced_recursion_limit.unwrap_or(self.cx.ecfg.recursion_limit);
-        println!("Recursion deeep: {}", self.cx.current_expansion.depth);
+        println!("expand_invoc: Recursion deeep: {}", self.cx.current_expansion.depth);
         if !recursion_limit.value_within_limit(self.cx.current_expansion.depth) {
             if self.cx.reduced_recursion_limit.is_none() {
                 self.error_recursion_limit_reached();
@@ -637,6 +638,7 @@ impl<'a, 'b> MacroExpander<'a, 'b> {
         ExpandResult::Ready(match invoc.kind {
             InvocationKind::Bang { mac, .. } => match ext {
                 SyntaxExtensionKind::Bang(expander) => {
+                    println!("Fall in the bang");
                     let Ok(tok_result) = expander.expand(self.cx, span, mac.args.inner_tokens()) else {
                         return ExpandResult::Ready(fragment_kind.dummy(span));
                     };
@@ -647,8 +649,8 @@ impl<'a, 'b> MacroExpander<'a, 'b> {
                     let prev = self.cx.current_expansion.prior_type_ascription;
                     self.cx.current_expansion.prior_type_ascription = mac.prior_type_ascription;
                     let tok_result = expander.expand(self.cx, span, mac.args.inner_tokens());
-                    println!("\n\n\n **** With Token result -> {} **** \n\n\n", format!("{:?}", mac.args.inner_tokens()));
                     let result = if let Some(result) = fragment_kind.make_from(tok_result) {
+                        println!("Success parsing");
                         result
                     } else {
                         self.error_wrong_fragment_kind(fragment_kind, &mac, span);
