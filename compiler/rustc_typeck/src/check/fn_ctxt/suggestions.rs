@@ -200,8 +200,8 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                     })
                 }
                 ty::Param(param) => {
-                    let def_id = self.tcx.generics_of(self.body_id.owner).type_param(&param, self.tcx).def_id;
-                    self.tcx.predicates_of(self.body_id.owner).predicates.iter().find_map(|(pred, _)| {
+                    let def_id = self.tcx.generics_of(self.body_id).type_param(&param, self.tcx).def_id;
+                    self.tcx.predicates_of(self.body_id).predicates.iter().find_map(|(pred, _)| {
                         if let ty::PredicateKind::Projection(proj) = pred.kind().skip_binder()
                         && Some(proj.projection_ty.item_def_id) == self.tcx.lang_items().fn_once_output()
                         && proj.projection_ty.self_ty() == found

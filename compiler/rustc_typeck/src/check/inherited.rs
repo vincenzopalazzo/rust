@@ -186,8 +186,9 @@ impl<'a, 'tcx> Inherited<'a, 'tcx> {
     where
         T: TypeFoldable<'tcx>,
     {
+        let body_def_id = self.tcx.hir().local_def_id(body_id);
         self.normalize_associated_types_in_with_cause(
-            ObligationCause::misc(span, body_id),
+            ObligationCause::misc(span, body_def_id),
             param_env,
             value,
         )

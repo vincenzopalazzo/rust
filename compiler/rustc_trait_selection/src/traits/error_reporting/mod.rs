@@ -530,15 +530,9 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
                             // If it has a custom `#[rustc_on_unimplemented]` note, let's display it
                             err.note(s.as_str());
                         }
+
                         if let Some(ref s) = parent_label {
-                            let body = tcx
-                                .hir()
-                                .opt_local_def_id(obligation.cause.body_id)
-                                .unwrap_or_else(|| {
-                                    tcx.hir().body_owner_def_id(hir::BodyId {
-                                        hir_id: obligation.cause.body_id,
-                                    })
-                                });
+                            let body = obligation.cause.body_id;
                             err.span_label(tcx.def_span(body), s);
                         }
 
@@ -603,6 +597,8 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
                             );
                         }
 
+                        let body_hir_id =
+                            self.tcx.hir().local_def_id_to_hir_id(obligation.cause.body_id);
                         // Try to report a help message
                         if is_fn_trait
                             && let Ok((implemented_kind, params)) = self.type_implements_fn_trait(
@@ -675,7 +671,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
                                 &mut err,
                                 trait_predicate,
                                 None,
-                                obligation.cause.body_id,
+                                body_hir_id,
                             );
                         } else if !suggested {
                             // Can't show anything else useful, try to find similar impls.
@@ -683,7 +679,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
                             if !self.report_similar_impl_candidates(
                                 impl_candidates,
                                 trait_ref,
-                                obligation.cause.body_id,
+                                body_hir_id,
                                 &mut err,
                             ) {
                                 // This is *almost* equivalent to
@@ -718,7 +714,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
                                     self.report_similar_impl_candidates(
                                         impl_candidates,
                                         trait_ref,
-                                        obligation.cause.body_id,
+                                        body_hir_id,
                                         &mut err,
                                     );
                                 }

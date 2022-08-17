@@ -691,7 +691,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         let InferOk { value: output_ty, obligations } = self
             .replace_opaque_types_with_inference_vars(
                 output_ty,
-                body_id,
+                self.tcx().hir().enclosing_body_owner(body_id),
                 self.tcx.def_span(expr_def_id),
                 self.param_env,
             );

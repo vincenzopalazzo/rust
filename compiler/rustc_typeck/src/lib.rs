@@ -310,9 +310,10 @@ fn check_main_fn_ty(tcx: TyCtxt<'_>, main_def_id: DefId) {
         tcx.infer_ctxt().enter(|infcx| {
             // Main should have no WC, so empty param env is OK here.
             let param_env = ty::ParamEnv::empty();
+            let diag_def_id = tcx.hir().local_def_id(main_diagnostics_hir_id);
             let cause = traits::ObligationCause::new(
                 return_ty_span,
-                main_diagnostics_hir_id,
+                diag_def_id,
                 ObligationCauseCode::MainFunctionType,
             );
             let ocx = traits::ObligationCtxt::new(&infcx);
@@ -339,13 +340,10 @@ fn check_main_fn_ty(tcx: TyCtxt<'_>, main_def_id: DefId) {
         tcx.mk_fn_sig(iter::empty(), expected_return_type, false, hir::Unsafety::Normal, Abi::Rust)
     }));
 
+    let diag_def_id = tcx.hir().local_def_id(main_diagnostics_hir_id);
     require_same_types(
         tcx,
-        &ObligationCause::new(
-            main_span,
-            main_diagnostics_hir_id,
-            ObligationCauseCode::MainFunctionType,
-        ),
+        &ObligationCause::new(main_span, diag_def_id, ObligationCauseCode::MainFunctionType),
         se_ty,
         tcx.mk_fn_ptr(main_fnsig),
     );
@@ -429,9 +427,14 @@ fn check_start_fn_ty(tcx: TyCtxt<'_>, start_def_id: DefId) {
                 Abi::Rust,
             )));
 
+            let start_def_id = tcx.hir().local_def_id(start_id);
             require_same_types(
                 tcx,
-                &ObligationCause::new(start_span, start_id, ObligationCauseCode::StartFunctionType),
+                &ObligationCause::new(
+                    start_span,
+                    start_def_id,
+                    ObligationCauseCode::StartFunctionType,
+                ),
                 se_ty,
                 tcx.mk_fn_ptr(tcx.fn_sig(start_def_id)),
             );

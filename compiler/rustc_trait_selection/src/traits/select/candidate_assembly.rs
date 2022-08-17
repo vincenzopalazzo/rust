@@ -817,9 +817,13 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                             )
                         {
                             if deref_output_trait_did == target_trait_did {
+                                let body_hir_id = self
+                                    .tcx()
+                                    .hir()
+                                    .local_def_id_to_hir_id(obligation.cause.body_id);
                                 self.tcx().struct_span_lint_hir(
                                     DEREF_INTO_DYN_SUPERTRAIT,
-                                    obligation.cause.body_id,
+                                    body_hir_id,
                                     obligation.cause.span,
                                     |lint| {
                                         lint.build(&format!(

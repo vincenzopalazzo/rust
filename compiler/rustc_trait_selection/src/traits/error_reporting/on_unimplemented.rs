@@ -20,7 +20,7 @@ pub trait InferCtxtExt<'tcx> {
     ) -> Option<(DefId, SubstsRef<'tcx>)>;
 
     /*private*/
-    fn describe_enclosure(&self, hir_id: hir::HirId) -> Option<&'static str>;
+    fn describe_enclosure(&self, hir_id: hir::def_id::LocalDefId) -> Option<&'static str>;
 
     fn on_unimplemented_note(
         &self,
@@ -77,9 +77,9 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
 
     /// Used to set on_unimplemented's `ItemContext`
     /// to be the enclosing (async) block/function/closure
-    fn describe_enclosure(&self, hir_id: hir::HirId) -> Option<&'static str> {
+    fn describe_enclosure(&self, hir_id: hir::def_id::LocalDefId) -> Option<&'static str> {
         let hir = self.tcx.hir();
-        let node = hir.find(hir_id)?;
+        let node = hir.find_by_def_id(hir_id)?;
         match &node {
             hir::Node::Item(hir::Item { kind: hir::ItemKind::Fn(sig, _, body_id), .. }) => {
                 self.describe_generator(*body_id).or_else(|| {
@@ -109,8 +109,13 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
                 Some(if movability.is_some() { "an async closure" } else { "a closure" })
             }),
             hir::Node::Expr(hir::Expr { .. }) => {
-                let parent_hid = hir.get_parent_node(hir_id);
-                if parent_hid != hir_id { self.describe_enclosure(parent_hid) } else { None }
+                let real_hir_id = hir.local_def_id_to_hir_id(hir_id);
+                let parent_hid = hir.get_parent_node(real_hir_id);
+                if parent_hid != real_hir_id {
+                    self.describe_enclosure(hir.local_def_id(parent_hid))
+                } else {
+                    None
+                }
             }
             _ => None,
         }

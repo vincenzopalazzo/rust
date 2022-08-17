@@ -1288,7 +1288,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
         trait_pred: ty::PolyTraitPredicate<'tcx>,
     ) -> bool {
         let hir = self.tcx.hir();
-        let parent_node = hir.get_parent_node(obligation.cause.body_id);
+        let parent_node = hir.get_parent_node_by_def_id(obligation.cause.body_id);
         let node = hir.find(parent_node);
         if let Some(hir::Node::Item(hir::Item { kind: hir::ItemKind::Fn(sig, _, body_id), .. })) = node
             && let hir::ExprKind::Block(blk, _) = &hir.body(*body_id).value.kind
@@ -1325,7 +1325,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
 
     fn return_type_span(&self, obligation: &PredicateObligation<'tcx>) -> Option<Span> {
         let hir = self.tcx.hir();
-        let parent_node = hir.get_parent_node(obligation.cause.body_id);
+        let parent_node = hir.get_parent_node_by_def_id(obligation.cause.body_id);
         let Some(hir::Node::Item(hir::Item { kind: hir::ItemKind::Fn(sig, ..), .. })) = hir.find(parent_node) else {
             return None;
         };
@@ -1350,7 +1350,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
         }
 
         let hir = self.tcx.hir();
-        let fn_hir_id = hir.get_parent_node(obligation.cause.body_id);
+        let fn_hir_id = hir.get_parent_node_by_def_id(obligation.cause.body_id);
         let node = hir.find(fn_hir_id);
         let Some(hir::Node::Item(hir::Item {
             kind: hir::ItemKind::Fn(sig, _, body_id),
@@ -1424,7 +1424,8 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
 
         match liberated_sig.output().kind() {
             ty::Dynamic(predicates, _) => {
-                let cause = ObligationCause::misc(ret_ty.span, fn_hir_id);
+                let fn_local_id = hir.enclosing_body_owner(fn_hir_id);
+                let cause = ObligationCause::misc(ret_ty.span, fn_local_id);
                 let param_env = ty::ParamEnv::empty();
 
                 if !only_never_return {
@@ -1562,7 +1563,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
         }
 
         let hir = self.tcx.hir();
-        let parent_node = hir.get_parent_node(obligation.cause.body_id);
+        let parent_node = hir.get_parent_node_by_def_id(obligation.cause.body_id);
         let node = hir.find(parent_node);
         if let Some(hir::Node::Item(hir::Item { kind: hir::ItemKind::Fn(_, _, body_id), .. })) =
             node
@@ -2817,7 +2818,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
         span: Span,
     ) {
         let body_hir_id = obligation.cause.body_id;
-        let item_id = self.tcx.hir().get_parent_node(body_hir_id);
+        let item_id = self.tcx.hir().get_parent_node_by_def_id(body_hir_id);
 
         if let Some(body_id) =
             self.tcx.hir().maybe_body_owned_by(self.tcx.hir().local_def_id(item_id))

@@ -38,7 +38,7 @@ use std::ops::Deref;
 /// [`ItemCtxt`]: crate::collect::ItemCtxt
 /// [`InferCtxt`]: infer::InferCtxt
 pub struct FnCtxt<'a, 'tcx> {
-    pub(super) body_id: hir::HirId,
+    pub(super) body_id: hir::def_id::LocalDefId,
 
     /// The parameter environment used for proving trait obligations
     /// in this function. This can change when we descend into
@@ -135,7 +135,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     pub fn new(
         inh: &'a Inherited<'a, 'tcx>,
         param_env: ty::ParamEnv<'tcx>,
-        body_id: hir::HirId,
+        body_id: hir::def_id::LocalDefId,
     ) -> FnCtxt<'a, 'tcx> {
         FnCtxt {
             body_id,

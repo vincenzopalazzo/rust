@@ -561,7 +561,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                                         &mut err,
                                         trait_pred,
                                         proj_pred,
-                                        self.body_id,
+                                        self.tcx.hir().local_def_id_to_hir_id(self.body_id),
                                     );
                                 }
                             }
@@ -715,7 +715,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                                 &mut err,
                                 pred,
                                 None,
-                                self.body_id,
+                                self.tcx.hir().local_def_id_to_hir_id(self.body_id),
                             );
                         }
                     }

@@ -150,11 +150,11 @@ fn compare_predicate_entailment<'tcx>(
     //
     // FIXME(@lcnr): remove that after removing `cause.body_id` from
     // obligations.
-    let impl_m_hir_id = tcx.hir().local_def_id_to_hir_id(impl_m.def_id.expect_local());
+
     // We sometimes modify the span further down.
     let mut cause = ObligationCause::new(
         impl_m_span,
-        impl_m_hir_id,
+        impl_m.def_id.expect_local(),
         ObligationCauseCode::CompareImplItemObligation {
             impl_item_def_id: impl_m.def_id.expect_local(),
             trait_item_def_id: trait_m.def_id,
@@ -202,7 +202,7 @@ fn compare_predicate_entailment<'tcx>(
     // Construct trait parameter environment and then shift it into the placeholder viewpoint.
     // The key step here is to update the caller_bounds's predicates to be
     // the new hybrid bounds we computed.
-    let normalize_cause = traits::ObligationCause::misc(impl_m_span, impl_m_hir_id);
+    let normalize_cause = traits::ObligationCause::misc(impl_m_span, impl_m.def_id.expect_local());
     let param_env = ty::ParamEnv::new(
         tcx.intern_predicates(&hybrid_preds.predicates),
         Reveal::UserFacing,
@@ -218,14 +218,14 @@ fn compare_predicate_entailment<'tcx>(
         let mut selcx = traits::SelectionContext::new(&infcx);
         let impl_m_own_bounds = impl_m_predicates.instantiate_own(tcx, impl_to_placeholder_substs);
         for (predicate, span) in iter::zip(impl_m_own_bounds.predicates, impl_m_own_bounds.spans) {
-            let normalize_cause = traits::ObligationCause::misc(span, impl_m_hir_id);
+            let normalize_cause = traits::ObligationCause::misc(span, impl_m.def_id.expect_local());
             let traits::Normalized { value: predicate, obligations } =
                 traits::normalize(&mut selcx, param_env, normalize_cause, predicate);
 
             ocx.register_obligations(obligations);
             let cause = ObligationCause::new(
                 span,
-                impl_m_hir_id,
+                impl_m.def_id.expect_local(),
                 ObligationCauseCode::CompareImplItemObligation {
                     impl_item_def_id: impl_m.def_id.expect_local(),
                     trait_item_def_id: trait_m.def_id,
@@ -259,7 +259,7 @@ fn compare_predicate_entailment<'tcx>(
             tcx.fn_sig(impl_m.def_id),
         );
 
-        let norm_cause = ObligationCause::misc(impl_m_span, impl_m_hir_id);
+        let norm_cause = ObligationCause::misc(impl_m_span, impl_m.def_id.expect_local());
         let impl_sig = ocx.normalize(norm_cause.clone(), param_env, impl_sig);
         let impl_fty = tcx.mk_fn_ptr(ty::Binder::dummy(impl_sig));
         debug!("compare_impl_method: impl_fty={:?}", impl_fty);
@@ -404,7 +404,7 @@ fn compare_predicate_entailment<'tcx>(
         let outlives_environment = OutlivesEnvironment::with_bounds(
             param_env,
             Some(infcx),
-            infcx.implied_bounds_tys(param_env, impl_m_hir_id, wf_tys),
+            infcx.implied_bounds_tys(param_env, impl_m.def_id.expect_local(), wf_tys),
         );
         infcx.check_region_obligations_and_report_errors(
             impl_m.def_id.expect_local(),
@@ -1079,16 +1079,12 @@ pub(crate) fn compare_const_impl<'tcx>(
         // shared functions because of DRY violations...
         let trait_to_impl_substs = impl_trait_ref.substs;
 
-        // Create a parameter environment that represents the implementation's
-        // method.
-        let impl_c_hir_id = tcx.hir().local_def_id_to_hir_id(impl_c.def_id.expect_local());
-
         // Compute placeholder form of impl and trait const tys.
         let impl_ty = tcx.type_of(impl_c.def_id);
         let trait_ty = tcx.bound_type_of(trait_c.def_id).subst(tcx, trait_to_impl_substs);
         let mut cause = ObligationCause::new(
             impl_c_span,
-            impl_c_hir_id,
+            impl_c.def_id.expect_local(),
             ObligationCauseCode::CompareImplItemObligation {
                 impl_item_def_id: impl_c.def_id.expect_local(),
                 trait_item_def_id: trait_c.def_id,
@@ -1224,10 +1220,6 @@ fn compare_type_predicate_entailment<'tcx>(
         return Ok(());
     }
 
-    // This `HirId` should be used for the `body_id` field on each
-    // `ObligationCause` (and the `FnCtxt`). This is what
-    // `regionck_item` expects.
-    let impl_ty_hir_id = tcx.hir().local_def_id_to_hir_id(impl_ty.def_id.expect_local());
     debug!("compare_type_predicate_entailment: trait_to_impl_substs={:?}", trait_to_impl_substs);
 
     // The predicates declared by the impl definition, the trait and the
@@ -1240,7 +1232,8 @@ fn compare_type_predicate_entailment<'tcx>(
 
     debug!("compare_type_predicate_entailment: bounds={:?}", hybrid_preds);
 
-    let normalize_cause = traits::ObligationCause::misc(impl_ty_span, impl_ty_hir_id);
+    let normalize_cause =
+        traits::ObligationCause::misc(impl_ty_span, impl_ty.def_id.expect_local());
     let param_env = ty::ParamEnv::new(
         tcx.intern_predicates(&hybrid_preds.predicates),
         Reveal::UserFacing,
@@ -1258,13 +1251,13 @@ fn compare_type_predicate_entailment<'tcx>(
         for (span, predicate) in
             std::iter::zip(impl_ty_own_bounds.spans, impl_ty_own_bounds.predicates)
         {
-            let cause = ObligationCause::misc(span, impl_ty_hir_id);
+            let cause = ObligationCause::misc(span, impl_ty.def_id.expect_local());
             let traits::Normalized { value: predicate, obligations } =
                 traits::normalize(&mut selcx, param_env, cause, predicate);
 
             let cause = ObligationCause::new(
                 span,
-                impl_ty_hir_id,
+                impl_ty.def_id.expect_local(),
                 ObligationCauseCode::CompareImplItemObligation {
                     impl_item_def_id: impl_ty.def_id.expect_local(),
                     trait_item_def_id: trait_ty.def_id,
@@ -1448,7 +1441,6 @@ pub fn check_type_bounds<'tcx>(
     };
     debug!(?normalize_param_env);
 
-    let impl_ty_hir_id = tcx.hir().local_def_id_to_hir_id(impl_ty.def_id.expect_local());
     let impl_ty_substs = InternalSubsts::identity_for_item(tcx, impl_ty.def_id);
     let rebased_substs = impl_ty_substs.rebase_onto(tcx, container_id, impl_trait_ref.substs);
 
@@ -1461,7 +1453,7 @@ pub fn check_type_bounds<'tcx>(
         let mut selcx = traits::SelectionContext::new(&infcx);
         let normalize_cause = ObligationCause::new(
             impl_ty_span,
-            impl_ty_hir_id,
+            impl_ty.def_id.expect_local(),
             ObligationCauseCode::CheckAssociatedTypeBounds {
                 impl_item_def_id: impl_ty.def_id.expect_local(),
                 trait_item_def_id: trait_ty.def_id,
@@ -1473,7 +1465,7 @@ pub fn check_type_bounds<'tcx>(
             } else {
                 traits::BindingObligation(trait_ty.def_id, span)
             };
-            ObligationCause::new(impl_ty_span, impl_ty_hir_id, code)
+            ObligationCause::new(impl_ty_span, impl_ty.def_id.expect_local(), code)
         };
 
         let obligations = tcx
@@ -1514,7 +1506,8 @@ pub fn check_type_bounds<'tcx>(
 
         // Finally, resolve all regions. This catches wily misuses of
         // lifetime parameters.
-        let implied_bounds = infcx.implied_bounds_tys(param_env, impl_ty_hir_id, assumed_wf_types);
+        let implied_bounds =
+            infcx.implied_bounds_tys(param_env, impl_ty.def_id.expect_local(), assumed_wf_types);
         let outlives_environment =
             OutlivesEnvironment::with_bounds(param_env, Some(&infcx), implied_bounds);
 
@@ -1527,10 +1520,7 @@ pub fn check_type_bounds<'tcx>(
         for (key, value) in constraints {
             infcx
                 .report_mismatched_types(
-                    &ObligationCause::misc(
-                        value.hidden_type.span,
-                        tcx.hir().local_def_id_to_hir_id(impl_ty.def_id.expect_local()),
-                    ),
+                    &ObligationCause::misc(value.hidden_type.span, impl_ty.def_id.expect_local()),
                     tcx.mk_opaque(key.def_id.to_def_id(), key.substs),
                     value.hidden_type.ty,
                     TypeError::Mismatch,

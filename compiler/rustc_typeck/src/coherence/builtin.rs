@@ -76,7 +76,8 @@ fn visit_implementation_of_copy(tcx: TyCtxt<'_>, impl_did: LocalDefId) {
 
     debug!("visit_implementation_of_copy: self_type={:?} (free)", self_type);
 
-    let cause = traits::ObligationCause::misc(span, impl_hir_id);
+    let impl_def_id = tcx.hir().local_def_id(impl_hir_id);
+    let cause = traits::ObligationCause::misc(span, impl_def_id);
     match can_type_implement_copy(tcx, param_env, self_type, cause) {
         Ok(()) => {}
         Err(CopyImplementationError::InfrigingFields(fields)) => {
@@ -212,7 +213,8 @@ fn visit_implementation_of_dispatch_from_dyn<'tcx>(tcx: TyCtxt<'tcx>, impl_did: 
     let create_err = |msg: &str| struct_span_err!(tcx.sess, span, E0378, "{}", msg);
 
     tcx.infer_ctxt().enter(|infcx| {
-        let cause = ObligationCause::misc(span, impl_hir_id);
+        let impl_def_id = tcx.hir().local_def_id(impl_hir_id);
+        let cause = ObligationCause::misc(span, impl_def_id);
 
         use rustc_type_ir::sty::TyKind::*;
         match (source.kind(), target.kind()) {
@@ -376,8 +378,7 @@ pub fn coerce_unsized_info<'tcx>(tcx: TyCtxt<'tcx>, impl_did: DefId) -> CoerceUn
     debug!("visit_implementation_of_coerce_unsized: {:?} -> {:?} (free)", source, target);
 
     tcx.infer_ctxt().enter(|infcx| {
-        let impl_hir_id = tcx.hir().local_def_id_to_hir_id(impl_did);
-        let cause = ObligationCause::misc(span, impl_hir_id);
+        let cause = ObligationCause::misc(span, impl_did);
         let check_mutbl = |mt_a: ty::TypeAndMut<'tcx>,
                            mt_b: ty::TypeAndMut<'tcx>,
                            mk_ptr: &dyn Fn(Ty<'tcx>) -> Ty<'tcx>| {
@@ -570,7 +571,7 @@ pub fn coerce_unsized_info<'tcx>(tcx: TyCtxt<'tcx>, impl_did: DefId) -> CoerceUn
         };
 
         // Register an obligation for `A: Trait<B>`.
-        let cause = traits::ObligationCause::misc(span, impl_hir_id);
+        let cause = traits::ObligationCause::misc(span, impl_did);
         let predicate = predicate_for_trait_def(
             tcx,
             param_env,

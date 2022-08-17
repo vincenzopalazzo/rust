@@ -56,7 +56,8 @@ fn equate_intrinsic_type<'tcx>(
         && gen_count_ok(own_counts.consts, 0, "const")
     {
         let fty = tcx.mk_fn_ptr(sig);
-        let cause = ObligationCause::new(it.span, it.hir_id(), ObligationCauseCode::IntrinsicType);
+        let def_id = tcx.hir().local_def_id(it.hir_id());
+        let cause = ObligationCause::new(it.span, def_id, ObligationCauseCode::IntrinsicType);
         require_same_types(tcx, &cause, tcx.mk_fn_ptr(tcx.fn_sig(it.def_id)), fty);
     }
 }

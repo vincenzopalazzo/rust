@@ -7,7 +7,6 @@ use rustc_data_structures::fx::{FxHashMap, FxHashSet};
 use rustc_data_structures::graph::scc::Sccs;
 use rustc_errors::Diagnostic;
 use rustc_hir::def_id::{DefId, CRATE_DEF_ID};
-use rustc_hir::CRATE_HIR_ID;
 use rustc_index::vec::IndexVec;
 use rustc_infer::infer::canonical::QueryOutlivesConstraint;
 use rustc_infer::infer::outlives::test_type_match;
@@ -2099,7 +2098,7 @@ impl<'tcx> RegionInferenceContext<'tcx> {
                         from_closure: false,
                         cause: ObligationCause::new(
                             constraint.span,
-                            CRATE_HIR_ID,
+                            CRATE_DEF_ID,
                             cause_code.clone(),
                         ),
                         variance_info: constraint.variance_info,

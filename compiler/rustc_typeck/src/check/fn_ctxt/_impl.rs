@@ -374,7 +374,12 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     where
         T: TypeFoldable<'tcx>,
     {
-        self.inh.normalize_associated_types_in(span, self.body_id, self.param_env, value)
+        self.inh.normalize_associated_types_in(
+            span,
+            self.tcx().hir().local_def_id_to_hir_id(self.body_id),
+            self.param_env,
+            value,
+        )
     }
 
     pub(in super::super) fn normalize_associated_types_in_as_infer_ok<T>(

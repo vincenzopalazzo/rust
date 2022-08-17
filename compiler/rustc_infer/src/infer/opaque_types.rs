@@ -2,7 +2,7 @@ use crate::errors::OpaqueHiddenTypeDiag;
 use crate::infer::{DefiningAnchor, InferCtxt, InferOk};
 use crate::traits;
 use hir::def_id::{DefId, LocalDefId};
-use hir::{HirId, OpaqueTyOrigin};
+use hir::OpaqueTyOrigin;
 use rustc_data_structures::sync::Lrc;
 use rustc_data_structures::vec_map::VecMap;
 use rustc_hir as hir;
@@ -46,7 +46,7 @@ impl<'a, 'tcx> InferCtxt<'a, 'tcx> {
     pub fn replace_opaque_types_with_inference_vars<T: TypeFoldable<'tcx>>(
         &self,
         value: T,
-        body_id: HirId,
+        body_id: LocalDefId,
         span: Span,
         param_env: ty::ParamEnv<'tcx>,
     ) -> InferOk<'tcx, T> {

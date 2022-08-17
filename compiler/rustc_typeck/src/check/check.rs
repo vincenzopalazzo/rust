@@ -4,6 +4,7 @@ use super::coercion::CoerceMany;
 use super::compare_method::check_type_bounds;
 use super::compare_method::{compare_const_impl, compare_impl_method, compare_ty_impl};
 use super::*;
+use hir::def_id;
 use rustc_attr as attr;
 use rustc_errors::{Applicability, ErrorGuaranteed, MultiSpan};
 use rustc_hir as hir;
@@ -85,19 +86,22 @@ pub(super) fn check_fn<'a, 'tcx>(
 ) -> (FnCtxt<'a, 'tcx>, Option<GeneratorTypes<'tcx>>) {
     // Create the function context. This is either derived from scratch or,
     // in the case of closures, based on the outer context.
-    let mut fcx = FnCtxt::new(inherited, param_env, body.value.hir_id);
+
+    // FIXME(vincenzopalazzo): there is a better way to set the body def id?
+    let mut fcx = FnCtxt::new(inherited, param_env, def_id::CRATE_DEF_ID);
     fcx.ps.set(UnsafetyState::function(fn_sig.unsafety, fn_id));
     fcx.return_type_pre_known = return_type_pre_known;
 
     let tcx = fcx.tcx;
     let hir = tcx.hir();
+    fcx.body_id = hir.local_def_id(body.value.hir_id);
 
     let declared_ret_ty = fn_sig.output();
 
     let ret_ty =
         fcx.register_infer_ok_obligations(fcx.infcx.replace_opaque_types_with_inference_vars(
             declared_ret_ty,
-            body.value.hir_id,
+            tcx.hir().enclosing_body_owner(body.value.hir_id),
             decl.output.span(),
             param_env,
         ));
@@ -719,7 +723,6 @@ fn check_opaque_meets_bounds<'tcx>(
 ) {
     let hidden_type = tcx.bound_type_of(def_id.to_def_id()).subst(tcx, substs);
 
-    let hir_id = tcx.hir().local_def_id_to_hir_id(def_id);
     let defining_use_anchor = match *origin {
         hir::OpaqueTyOrigin::FnReturn(did) | hir::OpaqueTyOrigin::AsyncFn(did) => did,
         hir::OpaqueTyOrigin::TyAlias => def_id,
@@ -731,7 +734,7 @@ fn check_opaque_meets_bounds<'tcx>(
             let ocx = ObligationCtxt::new(&infcx);
             let opaque_ty = tcx.mk_opaque(def_id.to_def_id(), substs);
 
-            let misc_cause = traits::ObligationCause::misc(span, hir_id);
+            let misc_cause = traits::ObligationCause::misc(span, def_id);
 
             match infcx.at(&misc_cause, param_env).eq(opaque_ty, hidden_type) {
                 Ok(infer_ok) => ocx.register_infer_ok_obligations(infer_ok),

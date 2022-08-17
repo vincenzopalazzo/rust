@@ -157,7 +157,8 @@ fn get_impl_substs<'tcx>(
             return None;
         }
 
-        let implied_bounds = infcx.implied_bounds_tys(param_env, impl1_hir_id, assumed_wf_types);
+        let impl1_def_id = tcx.hir().local_def_id(impl1_hir_id);
+        let implied_bounds = infcx.implied_bounds_tys(param_env, impl1_def_id, assumed_wf_types);
         let outlives_env = OutlivesEnvironment::with_bounds(param_env, Some(infcx), implied_bounds);
         infcx.check_region_obligations_and_report_errors(impl1_def_id, &outlives_env);
         let Ok(impl2_substs) = infcx.fully_resolve(impl2_substs) else {
@@ -345,15 +346,9 @@ fn check_predicates<'tcx>(
     // Include the well-formed predicates of the type parameters of the impl.
     for arg in tcx.impl_trait_ref(impl1_def_id).unwrap().substs {
         tcx.infer_ctxt().enter(|ref infcx| {
-            let obligations = wf::obligations(
-                infcx,
-                tcx.param_env(impl1_def_id),
-                tcx.hir().local_def_id_to_hir_id(impl1_def_id),
-                0,
-                arg,
-                span,
-            )
-            .unwrap();
+            let obligations =
+                wf::obligations(infcx, tcx.param_env(impl1_def_id), impl1_def_id, 0, arg, span)
+                    .unwrap();
 
             assert!(!obligations.needs_infer());
             impl2_predicates.extend(

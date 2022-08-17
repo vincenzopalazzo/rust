@@ -132,7 +132,7 @@ impl<'tcx, O> Obligation<'tcx, O> {
 
     pub fn misc(
         span: Span,
-        body_id: hir::HirId,
+        body_id: rustc_hir::def_id::LocalDefId,
         param_env: ty::ParamEnv<'tcx>,
         trait_ref: O,
     ) -> Obligation<'tcx, O> {

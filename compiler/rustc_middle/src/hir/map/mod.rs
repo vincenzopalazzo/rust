@@ -310,6 +310,12 @@ impl<'hir> Map<'hir> {
             .unwrap_or_else(|| bug!("No parent for node {:?}", self.node_to_string(hir_id)))
     }
 
+    pub fn get_parent_node_by_def_id(self, hir_def_id: LocalDefId) -> HirId {
+        let hir_id = self.local_def_id_to_hir_id(hir_def_id);
+        self.find_parent_node(hir_id)
+            .unwrap_or_else(|| bug!("No parent for node {:?}", self.node_to_string(hir_id)))
+    }
+
     /// Retrieves the `Node` corresponding to `id`, returning `None` if cannot be found.
     pub fn find(self, id: HirId) -> Option<Node<'hir>> {
         if id.local_id == ItemLocalId::from_u32(0) {

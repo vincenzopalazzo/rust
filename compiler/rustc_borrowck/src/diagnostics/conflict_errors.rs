@@ -543,7 +543,7 @@ impl<'cx, 'tcx> MirBorrowckCtxt<'cx, 'tcx> {
             let copy_did = infcx.tcx.lang_items().copy_trait().unwrap();
             let cause = ObligationCause::new(
                 span,
-                self.mir_hir_id(),
+                self.mir_def_id(),
                 rustc_infer::traits::ObligationCauseCode::MiscObligation,
             );
             fulfill_cx.register_bound(

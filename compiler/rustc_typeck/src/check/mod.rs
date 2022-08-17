@@ -366,7 +366,8 @@ fn typeck_with_fallback<'tcx>(
         let param_env = tcx.param_env(def_id);
         let fcx = if let Some(hir::FnSig { header, decl, .. }) = fn_sig {
             let fn_sig = if crate::collect::get_infer_ret_ty(&decl.output).is_some() {
-                let fcx = FnCtxt::new(&inh, param_env, body.value.hir_id);
+                let body_def_id = tcx.hir().local_def_id(body.value.hir_id);
+                let fcx = FnCtxt::new(&inh, param_env, body_def_id);
                 <dyn AstConv<'_>>::ty_of_fn(&fcx, id, header.unsafety, header.abi, decl, None, None)
             } else {
                 tcx.fn_sig(def_id)
@@ -384,7 +385,8 @@ fn typeck_with_fallback<'tcx>(
             );
             check_fn(&inh, param_env, fn_sig, decl, id, body, None, true).0
         } else {
-            let fcx = FnCtxt::new(&inh, param_env, body.value.hir_id);
+            let body_def_id = tcx.hir().local_def_id(body.value.hir_id);
+            let fcx = FnCtxt::new(&inh, param_env, body_def_id);
             let expected_type = body_ty
                 .and_then(|ty| match ty.kind {
                     hir::TyKind::Infer => Some(<dyn AstConv<'_>>::ast_ty_to_ty(&fcx, ty)),

@@ -270,7 +270,6 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
             // This logic duplicates most of `check_opaque_meets_bounds`.
             // FIXME(oli-obk): Also do region checks here and then consider removing `check_opaque_meets_bounds` entirely.
             let param_env = self.tcx.param_env(def_id);
-            let body_id = self.tcx.local_def_id_to_hir_id(def_id);
             // HACK This bubble is required for this tests to pass:
             // type-alias-impl-trait/issue-67844-nested-opaque.rs
             self.tcx.infer_ctxt().with_opaque_type_inference(DefiningAnchor::Bubble).enter(
@@ -287,7 +286,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
                     // the bounds that the function supplies.
                     match infcx.register_hidden_type(
                         OpaqueTypeKey { def_id, substs: id_substs },
-                        ObligationCause::misc(instantiated_ty.span, body_id),
+                        ObligationCause::misc(instantiated_ty.span, def_id),
                         param_env,
                         definition_ty,
                         origin,
@@ -300,7 +299,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
                         Err(err) => {
                             infcx
                                 .report_mismatched_types(
-                                    &ObligationCause::misc(instantiated_ty.span, body_id),
+                                    &ObligationCause::misc(instantiated_ty.span, def_id),
                                     self.tcx.mk_opaque(def_id.to_def_id(), id_substs),
                                     definition_ty,
                                     err,
@@ -311,7 +310,7 @@ impl<'a, 'tcx> InferCtxtExt<'tcx> for InferCtxt<'a, 'tcx> {
 
                     fulfillment_cx.register_predicate_obligation(
                         &infcx,
-                        Obligation::misc(instantiated_ty.span, body_id, param_env, predicate),
+                        Obligation::misc(instantiated_ty.span, def_id, param_env, predicate),
                     );
 
                     // Check that all obligations are satisfied by the implementation's

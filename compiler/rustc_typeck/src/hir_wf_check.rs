@@ -1,7 +1,8 @@
 use crate::collect::ItemCtxt;
+use hir::def_id;
 use rustc_hir as hir;
 use rustc_hir::intravisit::{self, Visitor};
-use rustc_hir::{ForeignItem, ForeignItemKind, HirId};
+use rustc_hir::{ForeignItem, ForeignItemKind};
 use rustc_infer::infer::TyCtxtInferExt;
 use rustc_infer::traits::{ObligationCause, WellFormedLoc};
 use rustc_middle::ty::query::Providers;
@@ -57,7 +58,7 @@ fn diagnostic_hir_wf_check<'tcx>(
         cause: Option<ObligationCause<'tcx>>,
         cause_depth: usize,
         icx: ItemCtxt<'tcx>,
-        hir_id: HirId,
+        hir_id: def_id::LocalDefId,
         param_env: ty::ParamEnv<'tcx>,
         depth: usize,
     }
@@ -108,7 +109,9 @@ fn diagnostic_hir_wf_check<'tcx>(
         cause: None,
         cause_depth: 0,
         icx,
-        hir_id,
+        // FIXME(vincenzopalazzo): rename field into def_id
+        //
+        hir_id: tcx.hir().local_def_id(hir_id),
         param_env: tcx.param_env(def_id.to_def_id()),
         depth: 0,
     };

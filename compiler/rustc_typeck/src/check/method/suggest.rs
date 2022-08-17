@@ -345,7 +345,8 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
                 let ty_span = match actual.kind() {
                     ty::Param(param_type) => {
-                        let generics = self.tcx.generics_of(self.body_id.owner.to_def_id());
+                        let body_hir_id = self.tcx.hir().local_def_id_to_hir_id(self.body_id);
+                        let generics = self.tcx.generics_of(body_hir_id.owner.to_def_id());
                         let type_param = generics.type_param(param_type, self.tcx);
                         Some(self.tcx.def_span(type_param.def_id))
                     }
@@ -496,9 +497,12 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                                     ty::Param(_) => {
                                         // Account for `fn` items like in `issue-35677.rs` to
                                         // suggest restricting its type params.
-                                        let did = self.tcx.hir().body_owner_def_id(hir::BodyId {
-                                            hir_id: self.body_id,
-                                        });
+                                        let body_hir_id =
+                                            self.tcx.hir().local_def_id_to_hir_id(self.body_id);
+                                        let did = self
+                                            .tcx
+                                            .hir()
+                                            .body_owner_def_id(hir::BodyId { hir_id: body_hir_id });
                                         Some(
                                             self.tcx
                                                 .hir()
@@ -1161,7 +1165,8 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             _ => None,
         });
         if let Some((field, field_ty)) = field_receiver {
-            let scope = tcx.parent_module(self.body_id).to_def_id();
+            let body_hir = tcx.hir().local_def_id_to_hir_id(self.body_id);
+            let scope = tcx.parent_module(body_hir).to_def_id();
             let is_accessible = field.vis.is_accessible_from(scope, tcx);
 
             if is_accessible {
@@ -1764,7 +1769,8 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             true
         });
 
-        let module_did = self.tcx.parent_module(self.body_id);
+        let body_hir = self.tcx.hir().local_def_id_to_hir_id(self.body_id);
+        let module_did = self.tcx.parent_module(body_hir);
         let (module, _, _) = self.tcx.hir().get_module(module_did);
         let span = module.spans.inject_use_span;
 
@@ -2062,7 +2068,8 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             };
             // Obtain the span for `param` and use it for a structured suggestion.
             if let Some(param) = param_type {
-                let generics = self.tcx.generics_of(self.body_id.owner.to_def_id());
+                let body_hir = self.tcx.hir().local_def_id_to_hir_id(self.body_id);
+                let generics = self.tcx.generics_of(body_hir.owner.to_def_id());
                 let type_param = generics.type_param(param, self.tcx);
                 let hir = self.tcx.hir();
                 if let Some(def_id) = type_param.def_id.as_local() {

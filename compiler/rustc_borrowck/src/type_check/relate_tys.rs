@@ -164,8 +164,7 @@ impl<'tcx> TypeRelatingDelegate<'tcx> for NllTypeRelatingDelegate<'_, '_, 'tcx> 
         let param_env = self.param_env();
         let span = self.span();
         let def_id = self.type_checker.body.source.def_id().expect_local();
-        let body_id = self.type_checker.tcx().hir().local_def_id_to_hir_id(def_id);
-        let cause = ObligationCause::misc(span, body_id);
+        let cause = ObligationCause::misc(span, def_id);
         self.type_checker
             .fully_perform_op(
                 self.locations,

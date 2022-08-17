@@ -2084,7 +2084,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             match *callee_ty.kind() {
                 ty::Param(param) => {
                     let param =
-                        self.tcx.generics_of(self.body_id.owner).type_param(&param, self.tcx);
+                        self.tcx.generics_of(self.tcx().hir().local_def_id_to_hir_id(self.body_id).owner).type_param(&param, self.tcx);
                     if param.kind.is_synthetic() {
                         // if it's `impl Fn() -> ..` then just fall down to the def-id based logic
                         def_id = param.def_id;
@@ -2093,7 +2093,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                         // and point at that.
                         let instantiated = self
                             .tcx
-                            .explicit_predicates_of(self.body_id.owner)
+                            .explicit_predicates_of(self.tcx().hir().local_def_id_to_hir_id(self.body_id).owner)
                             .instantiate_identity(self.tcx);
                         // FIXME(compiler-errors): This could be problematic if something has two
                         // fn-like predicates with different args, but callable types really never

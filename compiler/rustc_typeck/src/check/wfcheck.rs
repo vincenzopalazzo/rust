@@ -35,7 +35,7 @@ use std::ops::{ControlFlow, Deref};
 pub(super) struct WfCheckingCtxt<'a, 'tcx> {
     pub(super) ocx: ObligationCtxt<'a, 'tcx>,
     span: Span,
-    body_id: hir::HirId,
+    body_id: hir::def_id::LocalDefId,
     param_env: ty::ParamEnv<'tcx>,
 }
 impl<'a, 'tcx> Deref for WfCheckingCtxt<'a, 'tcx> {
@@ -88,13 +88,12 @@ pub(super) fn enter_wf_checking_ctxt<'tcx, F>(
     F: for<'a> FnOnce(&WfCheckingCtxt<'a, 'tcx>),
 {
     let param_env = tcx.param_env(body_def_id);
-    let body_id = tcx.hir().local_def_id_to_hir_id(body_def_id);
     tcx.infer_ctxt().enter(|ref infcx| {
         let ocx = ObligationCtxt::new(infcx);
 
         let assumed_wf_types = ocx.assumed_wf_types(param_env, span, body_def_id);
 
-        let mut wfcx = WfCheckingCtxt { ocx, span, body_id, param_env };
+        let mut wfcx = WfCheckingCtxt { ocx, span, body_id: body_def_id, param_env };
 
         if !tcx.features().trivial_bounds {
             wfcx.check_false_global_bounds()
@@ -106,7 +105,7 @@ pub(super) fn enter_wf_checking_ctxt<'tcx, F>(
             return;
         }
 
-        let implied_bounds = infcx.implied_bounds_tys(param_env, body_id, assumed_wf_types);
+        let implied_bounds = infcx.implied_bounds_tys(param_env, body_def_id, assumed_wf_types);
         let outlives_environment =
             OutlivesEnvironment::with_bounds(param_env, Some(infcx), implied_bounds);
 
@@ -697,11 +696,12 @@ fn resolve_regions_with_wf_tys<'tcx>(
     // Unfortunately, we have to use a new `InferCtxt` each call, because
     // region constraints get added and solved there and we need to test each
     // call individually.
+    let def_id = tcx.hir().local_def_id(id);
     tcx.infer_ctxt().enter(|infcx| {
         let outlives_environment = OutlivesEnvironment::with_bounds(
             param_env,
             Some(&infcx),
-            infcx.implied_bounds_tys(param_env, id, wf_tys.clone()),
+            infcx.implied_bounds_tys(param_env, def_id, wf_tys.clone()),
         );
         let region_bound_pairs = outlives_environment.region_bound_pairs();
 
@@ -1821,8 +1821,7 @@ impl<'tcx> WfCheckingCtxt<'_, 'tcx> {
         let mut span = self.span;
         let empty_env = ty::ParamEnv::empty();
 
-        let def_id = tcx.hir().local_def_id(self.body_id);
-        let predicates_with_span = tcx.predicates_of(def_id).predicates.iter().copied();
+        let predicates_with_span = tcx.predicates_of(self.body_id).predicates.iter().copied();
         // Check elaborated bounds.
         let implied_obligations = traits::elaborate_predicates_with_span(tcx, predicates_with_span);
 
@@ -1837,7 +1836,7 @@ impl<'tcx> WfCheckingCtxt<'_, 'tcx> {
             // Match the existing behavior.
             if pred.is_global() && !pred.has_late_bound_regions() {
                 let pred = self.normalize(span, None, pred);
-                let hir_node = tcx.hir().find(self.body_id);
+                let hir_node = tcx.hir().find(tcx.hir().local_def_id_to_hir_id(self.body_id));
 
                 // only use the span of the predicate clause (#90869)
 

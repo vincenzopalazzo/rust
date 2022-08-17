@@ -17,7 +17,7 @@ use std::iter;
 pub fn obligations<'a, 'tcx>(
     infcx: &InferCtxt<'a, 'tcx>,
     param_env: ty::ParamEnv<'tcx>,
-    body_id: hir::HirId,
+    body_id: hir::def_id::LocalDefId,
     recursion_depth: usize,
     arg: GenericArg<'tcx>,
     span: Span,
@@ -82,7 +82,7 @@ pub fn obligations<'a, 'tcx>(
 pub fn trait_obligations<'a, 'tcx>(
     infcx: &InferCtxt<'a, 'tcx>,
     param_env: ty::ParamEnv<'tcx>,
-    body_id: hir::HirId,
+    body_id: hir::def_id::LocalDefId,
     trait_pred: &ty::TraitPredicate<'tcx>,
     span: Span,
     item: &'tcx hir::Item<'tcx>,
@@ -104,7 +104,7 @@ pub fn trait_obligations<'a, 'tcx>(
 pub fn predicate_obligations<'a, 'tcx>(
     infcx: &InferCtxt<'a, 'tcx>,
     param_env: ty::ParamEnv<'tcx>,
-    body_id: hir::HirId,
+    body_id: hir::def_id::LocalDefId,
     predicate: ty::Predicate<'tcx>,
     span: Span,
 ) -> Vec<traits::PredicateObligation<'tcx>> {
@@ -170,7 +170,7 @@ pub fn predicate_obligations<'a, 'tcx>(
 struct WfPredicates<'tcx> {
     tcx: TyCtxt<'tcx>,
     param_env: ty::ParamEnv<'tcx>,
-    body_id: hir::HirId,
+    body_id: hir::def_id::LocalDefId,
     span: Span,
     out: Vec<traits::PredicateObligation<'tcx>>,
     recursion_depth: usize,

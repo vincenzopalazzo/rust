@@ -28,7 +28,7 @@ pub struct Autoderef<'a, 'tcx> {
     infcx: &'a InferCtxt<'a, 'tcx>,
     span: Span,
     overloaded_span: Span,
-    body_id: hir::HirId,
+    body_id: hir::def_id::LocalDefId,
     param_env: ty::ParamEnv<'tcx>,
 
     // Current state:
@@ -96,7 +96,7 @@ impl<'a, 'tcx> Autoderef<'a, 'tcx> {
     pub fn new(
         infcx: &'a InferCtxt<'a, 'tcx>,
         param_env: ty::ParamEnv<'tcx>,
-        body_id: hir::HirId,
+        body_id: hir::def_id::LocalDefId,
         span: Span,
         base_ty: Ty<'tcx>,
         overloaded_span: Span,
