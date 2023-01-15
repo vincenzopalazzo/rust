@@ -3231,7 +3231,7 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
         trait_pred: ty::PolyTraitPredicate<'tcx>,
         span: Span,
     ) {
-       if let Some(body_id) = self.tcx.hir().maybe_body_owned_by(obligation.cause.body_id) {
+ if let Some(body_id) = self.tcx.hir().maybe_body_owned_by(obligation.cause.body_id) {
             let body = self.tcx.hir().body(body_id);
             if let Some(hir::GeneratorKind::Async(_)) = body.generator_kind {
                 let future_trait = self.tcx.require_lang_item(LangItem::Future, None);

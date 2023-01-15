@@ -68,7 +68,7 @@ fn compute_implied_outlives_bounds<'tcx>(
         // bounds can be backward incompatible, e.g. #101951 was caused by
         // us not dealing with inference vars in `TypeOutlives` predicates.
         let obligations =
-           wf::obligations(infcx, param_env, CRATE_DEF_ID, 0, arg, DUMMY_SP).unwrap_or_default();
+            wf::obligations(infcx, param_env, CRATE_DEF_ID, 0, arg, DUMMY_SP).unwrap_or_default();
 
         // While these predicates should all be implied by other parts of
         // the program, they are still relevant as they may constrain
