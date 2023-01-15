@@ -14,6 +14,7 @@ use rustc_macros::{TypeFoldable, TypeVisitable};
 use rustc_middle::ty::subst::InternalSubsts;
 use rustc_middle::ty::visit::TypeVisitable;
 use rustc_middle::ty::{self, Ty, TypeSuperVisitable, TypeVisitor};
+use rustc_span::def_id::LocalDefId;
 use rustc_span::source_map::Span;
 use rustc_target::spec::abi::Abi;
 use rustc_trait_selection::traits;
@@ -620,8 +621,9 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 // function.
                 Some(hir::GeneratorKind::Async(hir::AsyncGeneratorKind::Fn)) => {
                     debug!("closure is async fn body");
-                    self.deduce_future_output_from_obligations(expr_def_id, body.id().hir_id)
-                        .unwrap_or_else(|| {
+                    let def_id = self.tcx.hir().body_owner_def_id(body.id());
+                    self.deduce_future_output_from_obligations(expr_def_id, def_id).unwrap_or_else(
+                        || {
                             // AFAIK, deducing the future output
                             // always succeeds *except* in error cases
                             // like #65159. I'd like to return Error
@@ -630,7 +632,8 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                             // *have* reported an
                             // error. --nikomatsakis
                             astconv.ty_infer(None, decl.output.span())
-                        })
+                        },
+                    )
                 }
 
                 _ => astconv.ty_infer(None, decl.output.span()),
@@ -665,7 +668,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     fn deduce_future_output_from_obligations(
         &self,
         expr_def_id: LocalDefId,
-        body_id: hir::HirId,
+        body_def_id: LocalDefId,
     ) -> Option<Ty<'tcx>> {
         let ret_coercion = self.ret_coercion.as_ref().unwrap_or_else(|| {
             span_bug!(self.tcx.def_span(expr_def_id), "async fn generator outside of a fn")
@@ -725,7 +728,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         let InferOk { value: output_ty, obligations } = self
             .replace_opaque_types_with_inference_vars(
                 output_ty,
-                body_id,
+                body_def_id,
                 self.tcx.def_span(expr_def_id),
                 self.param_env,
             );
@@ -822,6 +825,6 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         let liberated_sig =
             self.tcx().liberate_late_bound_regions(expr_def_id.to_def_id(), bound_sig);
         let liberated_sig = self.normalize(body.value.span, liberated_sig);
-        ClosureSignatures { bound_sig, liberated_sig }
+       ClosureSignatures { bound_sig, liberated_sig }
     }
 }

@@ -27,13 +27,15 @@ use crate::infer::{InferCtxt, TyCtxtInferExt};
 use crate::traits::error_reporting::TypeErrCtxtExt as _;
 use crate::traits::query::evaluate_obligation::InferCtxtExt as _;
 use rustc_errors::ErrorGuaranteed;
-use rustc_hir as hir;
-use rustc_hir::def_id::DefId;
+use rustc_hir::lang_items::LangItem;
+use rustc_infer::traits::TraitEngineExt as _;
 use rustc_middle::ty::fold::TypeFoldable;
 use rustc_middle::ty::visit::TypeVisitable;
 use rustc_middle::ty::{self, DefIdTree, ToPredicate, Ty, TyCtxt, TypeSuperVisitable};
 use rustc_middle::ty::{InternalSubsts, SubstsRef};
-use rustc_span::Span;
+use rustc_span::def_id::{DefId, CRATE_DEF_ID};
+use rustc_span::{sym, Span};
+use smallvec::SmallVec;
 
 use std::fmt::Debug;
 use std::ops::ControlFlow;
@@ -154,7 +156,7 @@ fn pred_known_to_hold_modulo_regions<'tcx>(
         // We can use a dummy node-id here because we won't pay any mind
         // to region obligations that arise (there shouldn't really be any
         // anyhow).
-        cause: ObligationCause::misc(span, hir::CRATE_HIR_ID),
+        cause: ObligationCause::misc(span, CRATE_DEF_ID),
         recursion_depth: 0,
         predicate: pred.to_predicate(infcx.tcx),
     };
@@ -168,7 +170,11 @@ fn pred_known_to_hold_modulo_regions<'tcx>(
         // this function's result remains infallible, we must confirm
         // that guess. While imperfect, I believe this is sound.
 
-        // FIXME(@lcnr): this function doesn't seem right.
+        // We can use a dummy node-id here because we won't pay any mind
+        // to region obligations that arise (there shouldn't really be any
+        // anyhow).
+        let cause = ObligationCause::misc(span, CRATE_DEF_ID);
+
         // The handling of regions in this area of the code is terrible,
         // see issue #29149. We should be able to improve on this with
         // NLL.

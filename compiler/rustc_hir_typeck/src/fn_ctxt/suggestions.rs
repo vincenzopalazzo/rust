@@ -34,7 +34,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             .liberated_fn_sigs()
             .get(self.tcx.hir().parent_id(self.body_id))
             .copied()
-    }
+   }
 
     pub(in super::super) fn suggest_semicolon_at_end(&self, span: Span, err: &mut Diagnostic) {
         // This suggestion is incorrect for
@@ -214,10 +214,11 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                     })
                 }
                 ty::Param(param) => {
-                    let def_id = self.tcx.generics_of(self.body_id.owner).type_param(&param, self.tcx).def_id;
-                    self.tcx.predicates_of(self.body_id.owner).predicates.iter().find_map(|(pred, _)| {
-                        if let ty::PredicateKind::Clause(ty::Clause::Projection(proj)) = pred.kind().skip_binder()
-                        && Some(proj.projection_ty.def_id) == self.tcx.lang_items().fn_once_output()
+                   let body_id = self.tcx.hir().local_def_id_to_hir_id(self.body_id);
+                    let def_id = self.tcx.generics_of(body_id.owner).type_param(&param, self.tcx).def_id;
+                    self.tcx.predicates_of(self.body_id).predicates.iter().find_map(|(pred, _)| {
+                        if let ty::PredicateKind::Projection(proj) = pred.kind().skip_binder()
+                        && Some(proj.projection_ty.item_def_id) == self.tcx.lang_items().fn_once_output()
                         && proj.projection_ty.self_ty() == found
                         // args tuple will always be substs[1]
                         && let ty::Tuple(args) = proj.projection_ty.substs.type_at(1).kind()

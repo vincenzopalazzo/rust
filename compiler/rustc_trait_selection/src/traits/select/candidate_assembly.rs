@@ -615,7 +615,7 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                             &obligation.cause,
                         ) {
                             if deref_trait_ref.def_id() == target_trait_did {
-                                return;
+                               return;
                             }
                         }
 

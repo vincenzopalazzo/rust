@@ -34,16 +34,16 @@ pub(super) fn check_fn<'a, 'tcx>(
     can_be_generator: Option<hir::Movability>,
 ) -> Option<GeneratorTypes<'tcx>> {
     let fn_id = fcx.tcx.hir().local_def_id_to_hir_id(fn_def_id);
-
     let tcx = fcx.tcx;
     let hir = tcx.hir();
 
     let declared_ret_ty = fn_sig.output();
 
+    let body_def_id = tcx.hir().body_owner_def_id(body.id());
     let ret_ty =
         fcx.register_infer_ok_obligations(fcx.infcx.replace_opaque_types_with_inference_vars(
             declared_ret_ty,
-            body.value.hir_id,
+            body_def_id,
             decl.output.span(),
             fcx.param_env,
         ));

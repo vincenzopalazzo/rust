@@ -9,7 +9,6 @@ use crate::infer::InferCtxt;
 use crate::traits::{NormalizeExt, ObligationCtxt};
 
 use hir::def::CtorOf;
-use hir::{Expr, HirId};
 use rustc_data_structures::fx::FxHashSet;
 use rustc_data_structures::stack::ensure_sufficient_stack;
 use rustc_errors::{
@@ -21,6 +20,7 @@ use rustc_hir::def::DefKind;
 use rustc_hir::def_id::DefId;
 use rustc_hir::intravisit::Visitor;
 use rustc_hir::lang_items::LangItem;
+use rustc_hir::HirId;
 use rustc_hir::{AsyncGeneratorKind, GeneratorKind, Node};
 use rustc_infer::infer::error_reporting::TypeErrCtxt;
 use rustc_infer::infer::type_variable::{TypeVariableOrigin, TypeVariableOriginKind};
@@ -34,6 +34,8 @@ use rustc_middle::ty::{
     IsSuggestable, ToPredicate, Ty, TyCtxt, TypeAndMut, TypeFoldable, TypeFolder,
     TypeSuperFoldable, TypeVisitable, TypeckResults,
 };
+use rustc_middle::ty::{TypeAndMut, TypeckResults};
+use rustc_span::def_id::LocalDefId;
 use rustc_span::symbol::{sym, Ident, Symbol};
 use rustc_span::{BytePos, DesugaringKind, ExpnKind, MacroKind, Span, DUMMY_SP};
 use rustc_target::spec::abi;
@@ -179,7 +181,7 @@ pub trait TypeErrCtxtExt<'tcx> {
         err: &mut Diagnostic,
         trait_pred: ty::PolyTraitPredicate<'tcx>,
         associated_item: Option<(&'static str, Ty<'tcx>)>,
-        body_id: hir::HirId,
+        body_id: LocalDefId,
     );
 
     fn suggest_dereferences(
@@ -514,7 +516,7 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
         mut err: &mut Diagnostic,
         trait_pred: ty::PolyTraitPredicate<'tcx>,
         associated_ty: Option<(&'static str, Ty<'tcx>)>,
-        body_id: hir::HirId,
+        body_id: LocalDefId,
     ) {
         let trait_pred = self.resolve_numeric_literals_with_default(trait_pred);
 
@@ -527,8 +529,9 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
 
         // FIXME: Add check for trait bound that is already present, particularly `?Sized` so we
         //        don't suggest `T: Sized + ?Sized`.
-        let mut hir_id = body_id;
-        while let Some(node) = self.tcx.hir().find(hir_id) {
+        let mut body_id = body_id;
+        while let Some(node) = self.tcx.hir().find_by_def_id(body_id) {
+            let hir_id = self.tcx.hir().local_def_id_to_hir_id(body_id);
             match node {
                 hir::Node::Item(hir::Item {
                     ident,
@@ -705,8 +708,7 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
 
                 _ => {}
             }
-
-            hir_id = self.tcx.hir().get_parent_item(hir_id).into();
+            body_id = self.tcx.local_parent(body_id);
         }
     }
 
@@ -1616,8 +1618,7 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
         trait_pred: ty::PolyTraitPredicate<'tcx>,
     ) -> bool {
         let hir = self.tcx.hir();
-        let parent_node = hir.parent_id(obligation.cause.body_id);
-        let node = hir.find(parent_node);
+        let node = hir.find_by_def_id(obligation.cause.body_id);
         if let Some(hir::Node::Item(hir::Item { kind: hir::ItemKind::Fn(sig, _, body_id), .. })) = node
             && let hir::ExprKind::Block(blk, _) = &hir.body(*body_id).value.kind
             && sig.decl.output.span().overlaps(span)
@@ -1653,7 +1654,8 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
 
     fn return_type_span(&self, obligation: &PredicateObligation<'tcx>) -> Option<Span> {
         let hir = self.tcx.hir();
-        let parent_node = hir.parent_id(obligation.cause.body_id);
+        let body_hir = hir.local_def_id_to_hir_id(obligation.cause.body_id);
+        let parent_node = hir.get_parent_node(body_hir);
         let Some(hir::Node::Item(hir::Item { kind: hir::ItemKind::Fn(sig, ..), .. })) = hir.find(parent_node) else {
             return None;
         };
@@ -1678,8 +1680,9 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
         }
 
         let hir = self.tcx.hir();
-        let fn_hir_id = hir.parent_id(obligation.cause.body_id);
-        let node = hir.find(fn_hir_id);
+        let body_hir = hir.local_def_id_to_hir_id(obligation.cause.body_id);
+        let fn_hir_id = hir.get_parent_node(body_hir);
+        let node = hir.find_by_def_id(obligation.cause.body_id);
         let Some(hir::Node::Item(hir::Item {
             kind: hir::ItemKind::Fn(sig, _, body_id),
             ..
@@ -1752,7 +1755,8 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
 
         match liberated_sig.output().kind() {
             ty::Dynamic(predicates, _, ty::Dyn) => {
-                let cause = ObligationCause::misc(ret_ty.span, fn_hir_id);
+                let fn_def_id = self.tcx.hir().local_def_id(fn_hir_id);
+                let cause = ObligationCause::misc(ret_ty.span, fn_def_id);
                 let param_env = ty::ParamEnv::empty();
 
                 if !only_never_return {
@@ -1890,8 +1894,7 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
         }
 
         let hir = self.tcx.hir();
-        let parent_node = hir.parent_id(obligation.cause.body_id);
-        let node = hir.find(parent_node);
+        let node = hir.find_by_def_id(obligation.cause.body_id);
         if let Some(hir::Node::Item(hir::Item { kind: hir::ItemKind::Fn(_, _, body_id), .. })) =
             node
         {
@@ -3228,12 +3231,7 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
         trait_pred: ty::PolyTraitPredicate<'tcx>,
         span: Span,
     ) {
-        let body_hir_id = obligation.cause.body_id;
-        let item_id = self.tcx.hir().parent_id(body_hir_id);
-
-        if let Some(body_id) =
-            self.tcx.hir().maybe_body_owned_by(self.tcx.hir().local_def_id(item_id))
-        {
+       if let Some(body_id) = self.tcx.hir().maybe_body_owned_by(obligation.cause.body_id) {
             let body = self.tcx.hir().body(body_id);
             if let Some(hir::GeneratorKind::Async(_)) = body.generator_kind {
                 let future_trait = self.tcx.require_lang_item(LangItem::Future, None);

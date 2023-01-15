@@ -839,14 +839,7 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                             err.note(s.as_str());
                         }
                         if let Some(ref s) = parent_label {
-                            let body = tcx
-                                .hir()
-                                .opt_local_def_id(obligation.cause.body_id)
-                                .unwrap_or_else(|| {
-                                    tcx.hir().body_owner_def_id(hir::BodyId {
-                                        hir_id: obligation.cause.body_id,
-                                    })
-                                });
+                            let body = obligation.cause.body_id;
                             err.span_label(tcx.def_span(body), s);
                         }
 
@@ -934,6 +927,8 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                             );
                         }
 
+                        let body_hir_id =
+                            self.tcx.hir().local_def_id_to_hir_id(obligation.cause.body_id);
                         // Try to report a help message
                         if is_fn_trait
                             && let Ok((implemented_kind, params)) = self.type_implements_fn_trait(
@@ -1014,7 +1009,7 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                             if !self.report_similar_impl_candidates(
                                 impl_candidates,
                                 trait_ref,
-                                obligation.cause.body_id,
+                                body_hir_id,
                                 &mut err,
                                 true,
                             ) {
@@ -1050,7 +1045,7 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                                     self.report_similar_impl_candidates(
                                         impl_candidates,
                                         trait_ref,
-                                        obligation.cause.body_id,
+                                        body_hir_id,
                                         &mut err,
                                         true,
                                     );

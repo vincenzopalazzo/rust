@@ -864,7 +864,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         return_expr_ty: Ty<'tcx>,
     ) {
         // Don't point at the whole block if it's empty
-        if span == self.tcx.hir().span(self.body_id) {
+        if span == self.tcx.def_span(self.body_id) {
             return;
         }
         for err in errors {
@@ -1374,7 +1374,8 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         let body = self.tcx.hir().body(anon_const.body);
 
         // Create a new function context.
-        let fcx = FnCtxt::new(self, self.param_env.with_const(), body.value.hir_id);
+        let def_id = self.tcx.hir().body_owner_def_id(body.id());
+        let fcx = FnCtxt::new(self, self.param_env.with_const(), def_id);
         crate::GatherLocalsVisitor::new(&fcx).visit_body(body);
 
         let ty = fcx.check_expr_with_expectation(&body.value, expected);
@@ -2151,13 +2152,14 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         variant: &'tcx ty::VariantDef,
         access_span: Span,
     ) -> Vec<Symbol> {
+        let body_def_id = self.tcx.hir().local_def_id_to_hir_id(self.body_id);
         variant
             .fields
             .iter()
             .filter(|field| {
                 let def_scope = self
                     .tcx
-                    .adjust_ident_and_get_scope(field.ident(self.tcx), variant.def_id, self.body_id)
+                    .adjust_ident_and_get_scope(field.ident(self.tcx), variant.def_id, body_def_id)
                     .1;
                 field.vis.is_accessible_from(def_scope, self.tcx)
                     && !matches!(
@@ -2199,8 +2201,9 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             match deref_base_ty.kind() {
                 ty::Adt(base_def, substs) if !base_def.is_enum() => {
                     debug!("struct named {:?}", deref_base_ty);
+                    let body_hir_id = self.tcx.hir().local_def_id_to_hir_id(self.body_id);
                     let (ident, def_scope) =
-                        self.tcx.adjust_ident_and_get_scope(field, base_def.did(), self.body_id);
+                        self.tcx.adjust_ident_and_get_scope(field, base_def.did(), body_hir_id);
                     let fields = &base_def.non_enum_variant().fields;
                     if let Some(index) = fields
                         .iter()
@@ -2538,7 +2541,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     }
 
     fn point_at_param_definition(&self, err: &mut Diagnostic, param: ty::ParamTy) {
-        let generics = self.tcx.generics_of(self.body_id.owner.to_def_id());
+        let generics = self.tcx.generics_of(self.body_id);
         let generic_param = generics.type_param(&param, self.tcx);
         if let ty::GenericParamDefKind::Type { synthetic: true, .. } = generic_param.kind {
             return;

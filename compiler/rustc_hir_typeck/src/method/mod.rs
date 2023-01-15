@@ -321,7 +321,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
         // Construct an obligation
         let poly_trait_ref = ty::Binder::dummy(trait_ref);
-        (
+       (
             traits::Obligation::new(
                 self.tcx,
                 cause,

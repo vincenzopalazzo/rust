@@ -403,7 +403,6 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 args,
                 sugg_span,
             );
-
             self.note_candidates_on_method_error(
                 rcvr_ty,
                 item_name,
@@ -1343,7 +1342,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             _ => None,
         });
         if let Some((field, field_ty)) = field_receiver {
-            let scope = tcx.parent_module(self.body_id);
+            let scope = tcx.parent_module_from_def_id(self.body_id);
             let is_accessible = field.vis.is_accessible_from(scope, tcx);
 
             if is_accessible {
@@ -2195,7 +2194,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             true
         });
 
-        let module_did = self.tcx.parent_module(self.body_id);
+        let module_did = self.tcx.parent_module_from_def_id(self.body_id);
         let (module, _, _) = self.tcx.hir().get_module(module_did);
         let span = module.spans.inject_use_span;
 
@@ -2517,7 +2516,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             };
             // Obtain the span for `param` and use it for a structured suggestion.
             if let Some(param) = param_type {
-                let generics = self.tcx.generics_of(self.body_id.owner.to_def_id());
+                let generics = self.tcx.generics_of(self.body_id.to_def_id());
                 let type_param = generics.type_param(param, self.tcx);
                 let hir = self.tcx.hir();
                 if let Some(def_id) = type_param.def_id.as_local() {

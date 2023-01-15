@@ -6,6 +6,7 @@ use rustc_middle::ty::query::Providers;
 use rustc_middle::ty::{self, FnSig, Lift, PolyFnSig, Ty, TyCtxt, TypeFoldable};
 use rustc_middle::ty::{ParamEnvAnd, Predicate};
 use rustc_middle::ty::{UserSelfTy, UserSubsts, UserType};
+use rustc_span::def_id::{DefId, CRATE_DEF_ID};
 use rustc_span::{Span, DUMMY_SP};
 use rustc_trait_selection::infer::InferCtxtBuilderExt;
 use rustc_trait_selection::traits::query::normalize::QueryNormalizeExt;
@@ -77,7 +78,6 @@ fn relate_mir_and_user_ty<'tcx>(
     // FIXME(#104764): We should check well-formedness before normalization.
     let predicate = ty::Binder::dummy(ty::PredicateKind::WellFormed(user_ty.into()));
     ocx.register_obligation(Obligation::new(ocx.infcx.tcx, cause, param_env, predicate));
-
     Ok(())
 }
 
@@ -129,7 +129,6 @@ fn relate_mir_and_user_substs<'tcx>(
         let impl_self_ty = ocx.normalize(&cause, param_env, impl_self_ty);
 
         ocx.eq(&cause, param_env, self_ty, impl_self_ty)?;
-
         let predicate = ty::Binder::dummy(ty::PredicateKind::WellFormed(impl_self_ty.into()));
         ocx.register_obligation(Obligation::new(tcx, cause.clone(), param_env, predicate));
     }
