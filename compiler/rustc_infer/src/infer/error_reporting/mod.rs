@@ -1471,6 +1471,8 @@ impl<'tcx> TypeErrCtxt<'_, 'tcx> {
                     let count = values.len();
                     let kind = key.descr();
                     for &sp in values {
+                        // FIXME(vincenzopalazzo): this error in case of a future
+                        // need to be prnted in a different way as discribed in https://hackmd.io/Wb6qYGr7SkiaHVEWQUslWw
                         err.span_label(
                             sp,
                             format!(
@@ -1481,7 +1483,7 @@ impl<'tcx> TypeErrCtxt<'_, 'tcx> {
                                 pluralize!(count),
                             ),
                         );
-                    }
+                   }
                 }
             }
         }
@@ -1778,14 +1780,19 @@ impl<'tcx> TypeErrCtxt<'_, 'tcx> {
                             }
                         }))
                     {
-                        diag.note_expected_found_extra(
-                            &expected_label,
-                            expected,
-                            &found_label,
-                            found,
-                            &sort_string(values.expected, exp_p),
-                            &sort_string(values.found, found_p),
-                        );
+                        // FIXME(vincenzopalazzo): in this of the missing await case
+                        // we do not really need this expected note.
+                        // we could safely remote it.
+                        if let Some(ExpectedFound { found: found_ty, .. }) = exp_found && !self.tcx.ty_is_opaque_future(found_ty) {
+                            diag.note_expected_found_extra(
+                                &expected_label,
+                                expected,
+                                &found_label,
+                                found,
+                                &sort_string(values.expected, exp_p),
+                                &sort_string(values.found, found_p),
+                            );
+                        }
                     }
                 }
                 _ => {
@@ -2839,7 +2846,8 @@ impl IntoDiagnosticArg for ObligationCauseAsDiagArg<'_> {
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TyCategory {
     Closure,
-    Opaque,
+    /// Boolan flag set to true means that the opaque type is a future
+    Opaque(bool),
     Generator(hir::GeneratorKind),
     Foreign,
 }
@@ -2848,7 +2856,13 @@ impl TyCategory {
     fn descr(&self) -> &'static str {
         match self {
             Self::Closure => "closure",
-            Self::Opaque => "opaque type",
+            Self::Opaque(is_future) => {
+                if !is_future {
+                    "opaque type"
+                } else {
+                    "future"
+                }
+            }
             Self::Generator(gk) => gk.descr(),
             Self::Foreign => "foreign type",
         }
@@ -2857,7 +2871,9 @@ impl TyCategory {
     pub fn from_ty(tcx: TyCtxt<'_>, ty: Ty<'_>) -> Option<(Self, DefId)> {
         match *ty.kind() {
             ty::Closure(def_id, _) => Some((Self::Closure, def_id)),
-            ty::Alias(ty::Opaque, ty::AliasTy { def_id, .. }) => Some((Self::Opaque, def_id)),
+            ty::Alias(ty::Opaque, ty::AliasTy { def_id, .. }) => {
+                Some((Self::Opaque(tcx.ty_is_opaque_future(ty)), def_id))
+            }
             ty::Generator(def_id, ..) => {
                 Some((Self::Generator(tcx.generator_kind(def_id).unwrap()), def_id))
             }
