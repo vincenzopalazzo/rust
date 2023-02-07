@@ -238,31 +238,16 @@ impl<'tcx> TypeErrCtxt<'_, 'tcx> {
                 }
             },
             (_, Some(ty)) if self.same_type_modulo_infer(exp_found.expected, ty) => {
-                diag.span_suggestion_verbose(
-                    exp_span.shrink_to_hi(),
-                    "consider `await`ing on the `Future`",
-                    ".await",
-                    Applicability::MaybeIncorrect,
-                );
+                diag.suggestion_verbose_await_on_span(exp_span.shrink_to_hi(), exp_span);
             }
             (Some(ty), _) if self.same_type_modulo_infer(ty, exp_found.found) => match cause.code()
             {
                 ObligationCauseCode::Pattern { span: Some(then_span), .. } => {
-                    diag.span_suggestion_verbose(
-                        then_span.shrink_to_hi(),
-                        "consider `await`ing on the `Future`",
-                        ".await",
-                        Applicability::MaybeIncorrect,
-                    );
+                    diag.suggestion_verbose_await_on_span(then_span.shrink_to_hi(), exp_span);
                 }
                 ObligationCauseCode::IfExpression(box IfExpressionCause { then_id, .. }) => {
                     let then_span = self.find_block_span_from_hir_id(*then_id);
-                    diag.span_suggestion_verbose(
-                        then_span.shrink_to_hi(),
-                        "consider `await`ing on the `Future`",
-                        ".await",
-                        Applicability::MaybeIncorrect,
-                    );
+                    diag.suggestion_verbose_await_on_span(then_span.shrink_to_hi(), exp_span);
                 }
                 ObligationCauseCode::MatchExpressionArm(box MatchExpressionArmCause {
                     ref prior_arms,

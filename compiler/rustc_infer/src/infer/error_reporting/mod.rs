@@ -1483,7 +1483,7 @@ impl<'tcx> TypeErrCtxt<'_, 'tcx> {
                                 pluralize!(count),
                             ),
                         );
-                   }
+                    }
                 }
             }
         }
@@ -1780,18 +1780,18 @@ impl<'tcx> TypeErrCtxt<'_, 'tcx> {
                             }
                         }))
                     {
-                        // FIXME(vincenzopalazzo): in this of the missing await case
-                        // we do not really need this expected note.
-                        // we could safely remote it.
-                        if let Some(ExpectedFound { found: found_ty, .. }) = exp_found && !self.tcx.ty_is_opaque_future(found_ty) {
-                            diag.note_expected_found_extra(
-                                &expected_label,
-                                expected,
-                                &found_label,
-                                found,
-                                &sort_string(values.expected, exp_p),
-                                &sort_string(values.found, found_p),
-                            );
+                        if let Some(ExpectedFound { found: found_ty, .. }) = exp_found {
+                            let is_future = self.tcx.ty_is_opaque_future(found_ty);
+                            if !is_future {
+                                diag.note_expected_found_extra(
+                                    &expected_label,
+                                    expected,
+                                    &found_label,
+                                    found,
+                                    &sort_string(values.expected, exp_p),
+                                    &sort_string(values.found, found_p),
+                                );
+                            }
                         }
                     }
                 }

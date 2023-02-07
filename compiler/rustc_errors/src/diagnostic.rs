@@ -876,6 +876,17 @@ impl Diagnostic {
         self
     }
 
+    pub fn suggestion_verbose_await_on_span(&mut self, sp: Span, source_sp: Span) -> &mut Self {
+        self.span_suggestion_verbose(
+            sp.shrink_to_hi(),
+            "consider `await`ing on the `Future`",
+            ".await",
+            Applicability::MaybeIncorrect,
+        );
+        self.span_note(source_sp, "calling an async function returns a future");
+        self
+    }
+
     /// Adds a suggestion to the JSON output that will not be shown in the CLI.
     ///
     /// This is intended to be used for suggestions that are *very* obvious in what the changes
