@@ -95,8 +95,13 @@ pub(super) fn parse(
                                     if kind == token::NonterminalKind::Expr2021
                                         && !features.expr_fragment_specifier_2024
                                     {
-                                        sess.dcx()
-                                            .emit_err(errors::Expr2021IsExperimental { span });
+                                        rustc_session::parse::feature_err(
+                                            sess,
+                                            sym::expr_fragment_specifier_2024,
+                                            span,
+                                            "fragment specifier `expr_2021` is unstable",
+                                        )
+                                        .emit();
                                     }
                                     result.push(TokenTree::MetaVarDecl(span, ident, Some(kind)));
                                     continue;
