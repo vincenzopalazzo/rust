@@ -100,7 +100,7 @@ use std::rc::Rc;
 /// This means a matcher can be represented by `&[MatcherLoc]`, and traversal mostly involves
 /// simply incrementing the current matcher position index by one.
 #[derive(Debug, PartialEq, Clone)]
-pub(crate) enum MatcherLoc {
+pub enum MatcherLoc {
     Token {
         token: Token,
     },
@@ -172,7 +172,7 @@ impl Display for MatcherLoc {
     }
 }
 
-pub(super) fn compute_locs(matcher: &[TokenTree]) -> Vec<MatcherLoc> {
+pub fn compute_locs(matcher: &[TokenTree]) -> Vec<MatcherLoc> {
     fn inner(
         tts: &[TokenTree],
         locs: &mut Vec<MatcherLoc>,

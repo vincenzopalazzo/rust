@@ -7,10 +7,10 @@ pub(crate) mod diagnostics;
 pub(crate) mod macro_rules;
 
 mod macro_check;
-mod macro_parser;
 mod metavar_expr;
 mod quoted;
 mod transcribe;
+pub mod macro_parser;
 
 use metavar_expr::MetaVarExpr;
 use rustc_ast::token::{Delimiter, NonterminalKind, Token, TokenKind};
@@ -22,14 +22,14 @@ use rustc_span::Span;
 /// Contains the sub-token-trees of a "delimited" token tree such as `(a b c)`.
 /// The delimiters are not represented explicitly in the `tts` vector.
 #[derive(PartialEq, Encodable, Decodable, Debug)]
-struct Delimited {
+pub struct Delimited {
     delim: Delimiter,
     /// FIXME: #67062 has details about why this is sub-optimal.
     tts: Vec<TokenTree>,
 }
 
 #[derive(PartialEq, Encodable, Decodable, Debug)]
-struct SequenceRepetition {
+pub struct SequenceRepetition {
     /// The sequence of token trees
     tts: Vec<TokenTree>,
     /// The optional separator
@@ -55,7 +55,7 @@ impl KleeneToken {
 /// A Kleene-style [repetition operator](https://en.wikipedia.org/wiki/Kleene_star)
 /// for token sequences.
 #[derive(Clone, PartialEq, Encodable, Decodable, Debug, Copy)]
-pub(crate) enum KleeneOp {
+pub enum KleeneOp {
     /// Kleene star (`*`) for zero or more repetitions
     ZeroOrMore,
     /// Kleene plus (`+`) for one or more repetitions
@@ -67,7 +67,7 @@ pub(crate) enum KleeneOp {
 /// Similar to `tokenstream::TokenTree`, except that `Sequence`, `MetaVar`, `MetaVarDecl`, and
 /// `MetaVarExpr` are "first-class" token trees. Useful for parsing macros.
 #[derive(Debug, PartialEq, Encodable, Decodable)]
-enum TokenTree {
+pub enum TokenTree {
     Token(Token),
     /// A delimited sequence, e.g. `($e:expr)` (RHS) or `{ $e }` (LHS).
     Delimited(DelimSpan, DelimSpacing, Delimited),
@@ -107,7 +107,7 @@ impl TokenTree {
         }
     }
 
-    fn token(kind: TokenKind, span: Span) -> TokenTree {
+    pub fn token(kind: TokenKind, span: Span) -> TokenTree {
         TokenTree::Token(Token::new(kind, span))
     }
 }

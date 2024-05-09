@@ -21,7 +21,7 @@ mod build;
 mod errors;
 // FIXME(Nilstrieb) Translate macro_rules diagnostics
 #[allow(rustc::untranslatable_diagnostic)]
-mod mbe;
+pub mod mbe;
 mod placeholders;
 mod proc_macro_server;
 

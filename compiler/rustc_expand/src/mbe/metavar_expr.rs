@@ -10,7 +10,7 @@ use rustc_span::Span;
 
 /// A meta-variable expression, for expansions based on properties of meta-variables.
 #[derive(Debug, Clone, PartialEq, Encodable, Decodable)]
-pub(crate) enum MetaVarExpr {
+pub enum MetaVarExpr {
     /// The number of repetitions of an identifier.
     Count(Ident, usize),
 

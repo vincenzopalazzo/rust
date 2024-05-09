@@ -1866,7 +1866,7 @@ declare_lint_pass!(
     KeywordIdents => [KEYWORD_IDENTS_2018, KEYWORD_IDENTS_2024]
 );
 
-struct UnderMacro(bool);
+pub(crate) struct UnderMacro(pub bool);
 
 impl KeywordIdents {
     fn check_tokens(&mut self, cx: &EarlyContext<'_>, tokens: &TokenStream) {

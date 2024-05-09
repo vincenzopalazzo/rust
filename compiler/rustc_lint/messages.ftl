@@ -643,3 +643,7 @@ lint_unused_result = unused result of type `{$ty}`
 
 lint_variant_size_differences =
     enum variant is more than three times larger ({$largest} bytes) than the next largest
+
+lint_macro_expr_fragment_specifier_2024_migration = 
+    the `expr` fragment specifier will accept more expressions in the 2024 edition.
+    .suggestion = to keep the existing behavior, use the `expr_2021` fragment specifier.
