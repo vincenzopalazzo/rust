@@ -4,7 +4,6 @@
 
 // This test ensures that the inline const match only on edition 2024
 #![feature(expr_fragment_specifier_2024)]
-#![feature(inline_const)]
 #![allow(incomplete_features)]
 
 macro_rules! m2021 {
