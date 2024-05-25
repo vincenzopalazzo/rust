@@ -77,6 +77,7 @@ mod traits;
 mod types;
 mod unit_bindings;
 mod unused;
+mod macro_expr_fragment_specifier_2024_migration;
 
 pub use shadowed_into_iter::{ARRAY_INTO_ITER, BOXED_SLICE_INTO_ITER};
 
@@ -113,6 +114,7 @@ use traits::*;
 use types::*;
 use unit_bindings::*;
 use unused::*;
+use macro_expr_fragment_specifier_2024_migration::*;
 
 /// Useful for other parts of the compiler / Clippy.
 pub use builtin::{MissingDoc, SoftLints};
@@ -168,6 +170,7 @@ early_lint_methods!(
             IncompleteInternalFeatures: IncompleteInternalFeatures,
             RedundantSemicolons: RedundantSemicolons,
             UnusedDocComment: UnusedDocComment,
+            Expr2024: Expr2024,
         ]
     ]
 );
