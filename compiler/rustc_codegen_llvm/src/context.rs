@@ -305,6 +305,20 @@ pub(crate) unsafe fn create_module<'ll>(
         }
     }
 
+    if let Some(regparm) = sess.opts.cg.regparm {
+        if sess.target.arch != "x86" && sess.target.arch != "x86_64" {
+            todo!("regparm is not supported on this target");
+        }
+        unsafe {
+            llvm::LLVMRustAddModuleFlagU32(
+                llmod,
+                llvm::LLVMModFlagBehavior::Override,
+                c"NumRegisterParameters".as_ptr(),
+                regparm,
+            );
+        };
+    }
+
     if let Some(BranchProtection { bti, pac_ret }) = sess.opts.unstable_opts.branch_protection {
         if sess.target.arch == "aarch64" {
             unsafe {
