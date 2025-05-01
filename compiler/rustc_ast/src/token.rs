@@ -1100,6 +1100,7 @@ pub enum NonterminalKind {
     Path,
     Vis,
     TT,
+    // Maybe add a new BracedTT that matches `( $tokens:tt* )`, `{ $tokens:tt* }`, and `[ $tokens:tt* ]`
 }
 
 impl NonterminalKind {

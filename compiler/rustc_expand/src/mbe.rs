@@ -112,4 +112,8 @@ impl TokenTree {
     fn token(kind: TokenKind, span: Span) -> TokenTree {
         TokenTree::Token(Token::new(kind, span))
     }
+
+//    fn delimited(span: DelimSpan, tts: Vec<TokenTree>) -> TokenTree {
+//        TokenTree::Delimited(span, DelimSpacing::new(Spacing::Alone, Spacing::Alone), Delimited { delim: Delimiter::Parenthesis, tts })
+//    }
 }

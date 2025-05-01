@@ -787,6 +787,7 @@ symbols! {
         debug_tuple_fields_finish,
         debugger_visualizer,
         decl_macro,
+        declarative_attribute_macros,
         declare_lint_pass,
         decode,
         default_alloc_error_handler,

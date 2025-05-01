@@ -24,6 +24,7 @@ use rustc_session::Session;
 use rustc_session::parse::ParseSess;
 use rustc_span::edition::Edition;
 use rustc_span::hygiene::Transparency;
+use rustc_span::sym::debug;
 use rustc_span::{Ident, MacroRulesNormalizedIdent, Span, kw, sym};
 use tracing::{debug, instrument, trace, trace_span};
 
@@ -397,21 +398,77 @@ pub fn compile_declarative_macro(
 
     // Parse the macro_rules! invocation
 
+    // Right now you can think of macro_rules as a macro like:
+    //
+    // ```
+    // macro_rules! macro_rules {
+    //     $($lhs:tt => $rhs:tt)+ => { ... }
+    // }
+    // ```
+    //
+    // We've been trying to modify it to be
+    //
+    // ```
+    // macro_rules! macro_rules {
+    //     $($(attr())? $lhs:tt => $rhs:tt)+ => { ... }
+    // }
+    // ```
+    //
+    // but we could also modify it to be
+    //
+    // ```
+    // macro_rules! macro_rules {
+    //     $(attr() $lhs:tt => $rhs:tt)+ => { ... }
+    //     $($lhs:tt => $rhs:tt)+ => { ... }
+    // }
+    // ```
+    //
+    // This second option might be easier... I'm not sure how hard it'd be to
+    // add a second rule though.
+    //
+    // The second option has a downside (or maybe a feature...) that it would
+    // only accept macros where _all_ the clauses were attributes or _none_ of
+    // them were.
+
+
+
     // The pattern that macro_rules matches.
     // The grammar for macro_rules! is:
     // $( $lhs:tt => $rhs:tt );+
     // ...quasiquoting this would be nice.
     // These spans won't matter, anyways
+
+    debug!(
+        "macro_rules! {{ {} }}",
+        pprust::tts_to_string(&macro_def),
+    );
+    // FIXME(declarative_attributes_macros): We want to extend this grammar to
+    // allow an optional `attr()` clause at the front, and whatever arguments we
+    // want to allow in attributes.
     let argument_gram = vec![
-        mbe::TokenTree::Sequence(
+        mbe::TokenTree::Sequence( // match some sequence of tokens
             DelimSpan::dummy(),
-            mbe::SequenceRepetition {
+            mbe::SequenceRepetition { // add a repetition operator, `$(...)+`. The + comes from `KleeneOp::OneOrMore` in line 423
                 tts: vec![
-                    mbe::TokenTree::MetaVarDecl(span, lhs_nm, tt_spec),
-                    mbe::TokenTree::token(token::FatArrow, span),
-                    mbe::TokenTree::MetaVarDecl(span, rhs_nm, tt_spec),
+                    // here, add something that corresponds to `$(attr())?
+                    mbe::TokenTree::Sequence(DelimSpan::dummy(), mbe::SequenceRepetition {
+                        tts: vec![
+                            mbe::TokenTree::Token(Token { kind: TokenKind::Ident(
+                                sym::attr,
+                                IdentIsRaw::Yes,
+                            ), span: span }),
+                            mbe::TokenTree::token(token::OpenParen, span),
+                            mbe::TokenTree::token(token::CloseParen, span),
+                        ],
+                        separator: None,
+                        kleene: mbe::KleeneToken::new(mbe::KleeneOp::ZeroOrOne, span),
+                        num_captures: 0,
+                    }),
+                    mbe::TokenTree::MetaVarDecl(span, lhs_nm, tt_spec), // This corresponds to `$lhs:tt`
+                    mbe::TokenTree::token(token::FatArrow, span), // this corresponds to `=>`
+                    mbe::TokenTree::MetaVarDecl(span, rhs_nm, tt_spec), // this matches `$rhs:tt`
                 ],
-                separator: Some(Token::new(
+                separator: Some(Token::new( // Different matches in the sequence are semicolon-separated
                     if macro_rules { token::Semi } else { token::Comma },
                     span,
                 )),
@@ -433,6 +490,10 @@ pub fn compile_declarative_macro(
             },
         ),
     ];
+    // TODO(vincenzopalazzo): WE was trying to understand how this parser works
+    // good luck with that when you are reading this comment
+
+
     // Convert it into `MatcherLoc` form.
     let argument_gram = mbe::macro_parser::compute_locs(&argument_gram);
 
