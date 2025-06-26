@@ -1,0 +1,1 @@
+Read the contribution guide on https://rustc-dev-guide.rust-lang.org//// Allows macro_rules! macros to be used as attribute macros (RFC 3697).

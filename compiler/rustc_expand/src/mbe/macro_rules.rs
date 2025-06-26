@@ -391,6 +391,7 @@ pub fn compile_declarative_macro(
     };
     let dummy_syn_ext = |guar| (mk_syn_ext(Arc::new(DummyExpander(guar))), Vec::new());
 
+    let tokens_nm = Ident::new(sym::lhs, span);
     let lhs_nm = Ident::new(sym::lhs, span);
     let rhs_nm = Ident::new(sym::rhs, span);
     let tt_spec = Some(NonterminalKind::TT);
@@ -442,69 +443,49 @@ pub fn compile_declarative_macro(
         "macro_rules! {{ {} }}",
         pprust::tts_to_string(&macro_def),
     );
-    // FIXME(declarative_attributes_macros): We want to extend this grammar to
-    // allow an optional `attr()` clause at the front, and whatever arguments we
-    // want to allow in attributes.
-    let argument_gram = vec![
-        mbe::TokenTree::Sequence( // match some sequence of tokens
-            DelimSpan::dummy(),
-            mbe::SequenceRepetition { // add a repetition operator, `$(...)+`. The + comes from `KleeneOp::OneOrMore` in line 423
-                tts: vec![
-                    // here, add something that corresponds to `$(attr())?
-                    mbe::TokenTree::Sequence(DelimSpan::dummy(), mbe::SequenceRepetition {
-                        tts: vec![
-                            mbe::TokenTree::Token(Token { kind: TokenKind::Ident(
-                                sym::attr,
-                                IdentIsRaw::Yes,
-                            ), span: span }),
-                            mbe::TokenTree::token(token::OpenParen, span),
-                            mbe::TokenTree::token(token::CloseParen, span),
-                        ],
-                        separator: None,
-                        kleene: mbe::KleeneToken::new(mbe::KleeneOp::ZeroOrOne, span),
-                        num_captures: 0,
-                    }),
-                    mbe::TokenTree::MetaVarDecl(span, lhs_nm, tt_spec), // This corresponds to `$lhs:tt`
-                    mbe::TokenTree::token(token::FatArrow, span), // this corresponds to `=>`
-                    mbe::TokenTree::MetaVarDecl(span, rhs_nm, tt_spec), // this matches `$rhs:tt`
-                ],
-                separator: Some(Token::new( // Different matches in the sequence are semicolon-separated
-                    if macro_rules { token::Semi } else { token::Comma },
-                    span,
-                )),
-                kleene: mbe::KleeneToken::new(mbe::KleeneOp::OneOrMore, span),
-                num_captures: 2,
-            },
-        ),
-        // to phase into semicolon-termination instead of semicolon-separation
-        mbe::TokenTree::Sequence(
-            DelimSpan::dummy(),
-            mbe::SequenceRepetition {
-                tts: vec![mbe::TokenTree::token(
-                    if macro_rules { token::Semi } else { token::Comma },
-                    span,
-                )],
-                separator: None,
-                kleene: mbe::KleeneToken::new(mbe::KleeneOp::ZeroOrMore, span),
-                num_captures: 0,
-            },
-        ),
+    let tt_gram = vec![
+        mbe::TokenTree::MetaVarDecl(span, tokens_nm, tt_spec), // This corresponds to `$tokens:tt`
     ];
     // TODO(vincenzopalazzo): WE was trying to understand how this parser works
     // good luck with that when you are reading this comment
 
 
     // Convert it into `MatcherLoc` form.
-    let argument_gram = mbe::macro_parser::compute_locs(&argument_gram);
+    let tt_gram = mbe::macro_parser::compute_locs(&tt_gram);
 
     let create_parser = || {
         let body = macro_def.body.tokens.clone();
         Parser::new(&sess.psess, body, rustc_parse::MACRO_ARGUMENTS)
     };
-
     let parser = create_parser();
+
+    // FIXME: recursive-descent parser for the macro format (series of lhs => rhs)
+    match parser.parse_token_tree() {
+        TokenTree::Delimited(_, _, _, lhs_tokens) => {
+            mbe::quoted::parse(
+                &TokenStream::new(vec![tt.clone()]),
+                true, // LHS
+                sess,
+                node_id,
+                features,
+                edition,
+            )
+            .pop()
+            .unwrap();
+        }
+        tt => {
+            let guar = sess.dcx().span_err(tt.span(), "macro expected delimited left-hand side");
+            return dummy_syn_ext(guar);
+        }
+    };
+    if let Err(e) = parser.expect(exp!(FatArrow)) {
+        return dummy_syn_ext(e.emit());
+    }
+
     let mut tt_parser =
         TtParser::new(Ident::with_dummy_span(if macro_rules { kw::MacroRules } else { kw::Macro }));
+    // FIXME: to turn an ast TokenTree into an mbe TokenTree:
+
     let argument_map =
         match tt_parser.parse_tt(&mut Cow::Owned(parser), &argument_gram, &mut NoopTracker) {
             Success(m) => m,
